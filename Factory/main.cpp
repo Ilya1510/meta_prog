@@ -2,34 +2,58 @@
 #include <string>
 #include <typeinfo>
 
-// Typelist https://habr.com/ru/post/220217/
+// ------------------------------------------ Typelist https://habr.com/ru/post/220217/
 namespace internal {
     struct Void{};
 } // internal
 
 template<typename ...Args>
-struct Typelist
-{
-    typedef internal::Void Head;
-    typedef internal::Void Tail;
+struct Typelist{};
+
+// ------------------------------------------ TypeExists in Typelist
+template <typename TList, typename T> struct TypeExists;
+
+template <typename T, typename... Tail>
+struct TypeExists<Typelist<T, Tail...>, T> {
+    static constexpr bool result = true;
 };
 
-typedef Typelist<> EmptyTypeList;
-
-template<typename H, typename ...T>
-struct Typelist<H, T...>
-{
-    typedef H Head;
-    typedef Typelist<T...> Tail;
+template <typename Head, typename... Tail, typename T>
+struct TypeExists<Typelist<Head, Tail...>, T> {
+    static constexpr bool result = TypeExists<Typelist<Tail...>, T>::result;
 };
+
+template <typename T>
+struct TypeExists<Typelist<>, T> {
+    static constexpr bool result = false;
+};
+
+// ------------------------------------------ FindDerived in Typelist
+template <typename TList, typename T> struct FindDerived;
+
+template <typename F, typename... Tail, typename T>
+struct FindDerived<Typelist<F, Tail...>, T> {
+    typedef std::conditional_t<std::is_base_of_v<T, F>,
+            F, typename FindDerived<Typelist<Tail...>, T>::result> result;
+};
+
+template <typename T>
+struct FindDerived<Typelist<>, T> {
+    typedef internal::Void result;
+};
+
 // end of Typelist
 
 // --------------------------------------------- Factory
 
 template <class T>
-struct ConcreteFactory {
+struct ConcreteFactory;
+
+template <class ... ListArgs>
+struct ConcreteFactory<Typelist<ListArgs...>> {
     template <class U>
     U* Get() {
+        typedef typename FindDerived<Typelist<ListArgs...>, U>::result T;
         return new T();
     }
 };
@@ -38,19 +62,14 @@ struct ConcreteFactory {
 
 template <class F, class ... Args>
 struct FindInList {
-    typedef ConcreteFactory<internal::Void> result;
+    typedef ConcreteFactory<Typelist<internal::Void>> result;
 };
 
-template <class F, class T, class ... ListArgs, class ... Args>
-struct FindInList<F, Typelist<T, ListArgs...>, Args...> {
-    typedef std::conditional_t <std::is_same_v<F, T>,
-            ConcreteFactory<T>,
-            typename FindInList<F, Typelist<ListArgs...>, Args...>::result> result;
-};
-
-template <class F, class ... Args>
-struct FindInList<F, Typelist<>, Args...> {
-    typedef typename FindInList<F, Args...>::result result;
+template <class F, class ... ListArgs, class ... Args>
+struct FindInList<F, Typelist<ListArgs...>, Args...> {
+    typedef std::conditional_t<TypeExists<Typelist<ListArgs...>, F>::result,
+            ConcreteFactory<Typelist<ListArgs...>>,
+            typename FindInList<F, Args...>::result> result;
 };
 
 // --------------------------------------------- GetAbstractFactory
@@ -91,9 +110,10 @@ using MyFactoryHierarchy = GetAbstractFactory<2,2,
 
 
 int main() {
-    auto MyFactory = new MyFactoryHierarchy::GetConcreteFactory<GreenBeer>::result;
-    //std::cout << typeid(*MyFactory).name() << std::endl;
-    Beer* a = MyFactory->Get<Beer>();
-    a->say_name();
+    auto GreenFactory = new MyFactoryHierarchy::GetConcreteFactory<GreenBeer>::result;
+    Beer* green_beer = GreenFactory->Get<Beer>();
+    green_beer->say_name(); // I am Green Beer
+    Apple* green_apple = GreenFactory->Get<Apple>();
+    green_apple->say_name(); // I am Green Apple
     return 0;
 }
