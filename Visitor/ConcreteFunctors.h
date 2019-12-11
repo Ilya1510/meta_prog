@@ -9,37 +9,52 @@
 #include "functor.h"
 #include "Accepter.h"
 #include "Visitor.h"
+#include <cassert>
 
-class StatsParagraphFunctor: public FunctorImpl<int, Visitor*, Accepter*, int> {
+class DocStats;
+
+class StatsParagraphFunctor: public FunctorImpl<
+        int,
+        const DocStats&,
+        const Paragraph&,
+        int> {
 public:
-    typedef Paragraph AccepterType;
-    typedef DocStats VisitorType;
-
     StatsParagraphFunctor() = default;
     [[nodiscard]] StatsParagraphFunctor* Clone() const override {
         return new StatsParagraphFunctor(*this);
     }
-    int operator()(Visitor* v, Accepter* a, int args_count) override {
-        a->Accept(*v);
+    int operator()(const DocStats& docStats, const Paragraph& paragraph, int args_count) override {
         std::cout << "Stats Paragraph Functor done" << std::endl;
         return 0;
+    }
+    void CheckArgs(const DocStats& docStats, const Paragraph& paragraph, int args_count) override {
+        if (args_count != 0) {
+            std::cout << "Args count for StatsParagraphFunctor should be 0" << std::endl;
+            assert(args_count == 0);
+        }
     }
 private:
 };
 
-class StatsImageFunctor: public FunctorImpl<int, Visitor*, Accepter*, int> {
+class StatsImageFunctor: public FunctorImpl<
+        int,
+        const DocStats&,
+        const Image&,
+        int> {
 public:
-    typedef Image AccepterType;
-    typedef DocStats VisitorType;
-
     StatsImageFunctor() = default;
     [[nodiscard]] StatsImageFunctor* Clone() const override {
         return new StatsImageFunctor(*this);
     }
-    int operator()(Visitor* v, Accepter* a, int args_count) override {
-        a->Accept(*v);
+    int operator()(const DocStats& docStats, const Image& image, int args_count) override {
         std::cout << "Stats Image Functor done" << std::endl;
         return 1;
+    }
+    void CheckArgs(const DocStats& docStats, const Image& image, int args_count) override {
+        if (args_count != 0) {
+            std::cout << "Args count for StatsImageFunctor should be 0" << std::endl;
+            assert(args_count == 0);
+        }
     }
 private:
 };

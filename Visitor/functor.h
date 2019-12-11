@@ -24,9 +24,12 @@ public:
     R operator()(Args... args) {
         return (*spImpl_)(args...);
     }
+    virtual void CheckArgs(Args... args) {
+        return spImpl_->CheckArgs(args...);
+    }
+
     template <class Fun>
     Functor (const Fun& fun, bool fromFunction);
-
 private:
     typedef FunctorImpl<R, Args...> Impl;
     std::shared_ptr<Impl> spImpl_;
@@ -38,6 +41,7 @@ class FunctorImpl
 public:
     virtual R operator()(Args... args) = 0;
     virtual FunctorImpl* Clone() const = 0;
+    virtual void CheckArgs(Args... args) = 0;
     virtual ~FunctorImpl() = default;
 };
 
@@ -54,6 +58,7 @@ public:
     ResultType operator()(Args... args){
         return fun_(args...);
     }
+    void CheckArgs(Args... args) {}
 private:
     Fun fun_;
 };

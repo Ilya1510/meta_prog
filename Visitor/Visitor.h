@@ -9,14 +9,16 @@
 #include "Accepter.h"
 #include "functor.h"
 
+template <class R, class... Args>
 class Accepter;
 class Paragraph;
 class Image;
 
+template <class R, class... Args>
 class Visitor { //! Visitor
 public:
-    virtual void Visit(const Paragraph&) = 0;
-    virtual void Visit(const Image&) = 0;
+    virtual R Visit(const Paragraph&, Args... args) = 0;
+    virtual R Visit(const Image&, Args... args) = 0;
 };
 
 #endif //VISITOR_VISITOR_H

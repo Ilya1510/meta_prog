@@ -6,20 +6,20 @@
 #define VISITOR_ACCEPTER_H
 
 #include "Visitor.h"
+#include "ConcreteFunctors.h"
 #include <string>
 #include <utility>
 
-class Visitor;
-
+template <class R, class... Args>
 class Accepter { //! Accepter
 public:
-    virtual void Accept(Visitor&) = 0;
+    virtual R Accept(Visitor<R, Args...>&, Args... args) = 0;
 };
 
-class Paragraph : public Accepter { //! Concrete Accepter
+class Paragraph : public Accepter<int, int> { //! Concrete Accepter
 public:
-    void Accept(Visitor& v) override {
-        return v.Visit(*this);
+    int Accept(Visitor<int, int>& v, int args_count) override {
+        return v.Visit(*this, args_count);
     }
     explicit Paragraph(std::string text)
         : text_(std::move(text)) {
@@ -40,21 +40,28 @@ private:
     std::string text_;
 };
 
-class Image : public Accepter { //! Concrete Accepter
+class Image : public Accepter<int, int> { //! Concrete Accepter
 public:
-    void Accept(Visitor& v) override {
-        return v.Visit(*this);
+    int Accept(Visitor<int, int>& v, int args_count) override {
+        return v.Visit(*this, args_count);
     }
 };
 
-class DocStats : public Visitor { //! Concrete Visitor
+class DocStats : public Visitor<int, int> { //! Concrete Visitor
 public:
-    void Visit(const Paragraph& paragraph) override {
+    int Visit(const Paragraph& paragraph, int args_count) override {
         words_count_ += paragraph.words_count();
+        //auto foundFunctor = FindFunctor<FunctorsList, int, Visitor*, Accepter*, int, Args...>::find(v, a);
+        auto functor = Functor<int, const DocStats&, const Paragraph&, int>(std::shared_ptr<StatsParagraphFunctor>(new StatsParagraphFunctor()));
+        functor.CheckArgs(*this, paragraph, args_count);
+        return functor(*this, paragraph, args_count);
     }
 
-    void Visit(const Image&) override {
+    int Visit(const Image& image, int args_count) override {
         images_count_ += 1;
+        auto functor = Functor<int, const DocStats&, const Image&, int>(std::shared_ptr<StatsImageFunctor>(new StatsImageFunctor()));
+        functor.CheckArgs(*this, image, args_count);
+        return functor(*this, image, args_count);
     }
 
     void DisplayStats() const {
